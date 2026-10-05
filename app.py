@@ -1,9 +1,17 @@
 import os
 import sys
 import subprocess
-from flask import Flask, render_template, request, jsonify, send_from_directory, send_file
+import requests
+from flask import Flask, render_template, request, jsonify, send_file, Response
 from flask_cors import CORS
 import downloader
+
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 CORS(app)
@@ -26,6 +34,30 @@ def get_info():
 
     info = downloader.fetch_video_info(url)
     return jsonify(info)
+
+
+@app.route("/api/thumbnail", methods=["GET"])
+def proxy_thumbnail():
+    """Proxy video thumbnail image to bypass referrer/hotlink restrictions."""
+    img_url = request.args.get("url", "").strip()
+    if not img_url:
+        return "No URL provided", 400
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+        }
+        if "ytimg" in img_url or "youtube" in img_url:
+            headers["Referer"] = "https://www.youtube.com/"
+        elif "tiktok" in img_url:
+            headers["Referer"] = "https://www.tiktok.com/"
+        elif "instagram" in img_url or "cdninstagram" in img_url:
+            headers["Referer"] = "https://www.instagram.com/"
+
+        r = requests.get(img_url, headers=headers, timeout=10)
+        content_type = r.headers.get("Content-Type", "image/jpeg")
+        return (r.content, 200, {"Content-Type": content_type, "Cache-Control": "public, max-age=86400"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/api/download", methods=["POST"])
@@ -107,8 +139,9 @@ def open_folder():
 
 if __name__ == "__main__":
     print("\n" + "=" * 60)
-    print(" 🚀 ALL-IN-ONE VIDEO DOWNLOADER (NO WATERMARK) IS RUNNING!")
-    print(" 🌐 Open your browser at: http://localhost:5000")
-    print(" 📁 Downloads folder: " + os.path.abspath(downloader.DOWNLOAD_DIR))
+    print(" [*] ALL-IN-ONE VIDEO DOWNLOADER (NO WATERMARK) IS RUNNING!")
+    print(" [*] Open on PC: http://localhost:5000")
+    print(" [*] Open on Mobile: http://192.168.0.101:5000")
+    print(" [*] Downloads folder: " + os.path.abspath(downloader.DOWNLOAD_DIR))
     print("=" * 60 + "\n")
     app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
