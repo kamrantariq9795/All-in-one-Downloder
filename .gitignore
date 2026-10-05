@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller build outputs
+build/
+dist/
+*.spec
+
+# Downloaded user videos (Keep folder structure)
+downloads/*
+!downloads/.gitkeep
+
+# Environment & temporary files
+.env
+.venv
+env/
+venv/
+ENV/
+*.log
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+
+# Flutter build cache
+flutter_app/build/
+flutter_app/.dart_tool/

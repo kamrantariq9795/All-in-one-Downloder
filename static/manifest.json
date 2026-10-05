@@ -1,0 +1,25 @@
+{
+  "name": "OmniDownloader PRO - No Watermark",
+  "short_name": "OmniDownloader",
+  "description": "High Quality Video Downloader for TikTok, YouTube, Instagram & Facebook without watermark",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070913",
+  "theme_color": "#4f46e5",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/static/images/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/images/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

@@ -1,0 +1,2 @@
+rootProject.name = "OmniDownloader"
+include ':app'
