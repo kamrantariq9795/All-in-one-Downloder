@@ -138,10 +138,11 @@ def open_folder():
 
 
 if __name__ == "__main__":
+    # Support cloud host port (Render, Railway, Hugging Face) or default 5000
+    port = int(os.environ.get("PORT", 5000))
     print("\n" + "=" * 60)
     print(" [*] ALL-IN-ONE VIDEO DOWNLOADER (NO WATERMARK) IS RUNNING!")
-    print(" [*] Open on PC: http://localhost:5000")
-    print(" [*] Open on Mobile: http://192.168.0.101:5000")
+    print(f" [*] Running on port: {port}")
     print(" [*] Downloads folder: " + os.path.abspath(downloader.DOWNLOAD_DIR))
     print("=" * 60 + "\n")
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True)
+    app.run(host="0.0.0.0", port=port, debug=False, threaded=True)

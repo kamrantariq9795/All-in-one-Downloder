@@ -12,9 +12,12 @@ import yt_dlp
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-# Base directories
+# Base directories (auto-detects Android mobile public storage)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
+if os.path.exists("/sdcard/Download"):
+    DOWNLOAD_DIR = "/sdcard/Download"
+else:
+    DOWNLOAD_DIR = os.path.join(BASE_DIR, "downloads")
 os.makedirs(DOWNLOAD_DIR, exist_ok=True)
 
 # Find FFmpeg binary

@@ -10,12 +10,13 @@ const urlForm = document.getElementById("urlForm");
 const videoUrlInput = document.getElementById("videoUrl");
 const pasteBtn = document.getElementById("pasteBtn");
 const fetchBtn = document.getElementById("fetchBtn");
+const detectedIcon = document.getElementById("detectedIcon");
 const statusMessage = document.getElementById("statusMessage");
+const autoSaveToggle = document.getElementById("autoSaveToggle");
 
 // Preview Elements
 const previewCard = document.getElementById("previewCard");
 const videoThumbnail = document.getElementById("videoThumbnail");
-const thumbnailFallback = document.getElementById("thumbnailFallback");
 const platformBadge = document.getElementById("platformBadge");
 const noWatermarkBadge = document.getElementById("noWatermarkBadge");
 const videoDuration = document.getElementById("videoDuration");
@@ -37,23 +38,31 @@ const progressDownloaded = document.getElementById("progressDownloaded");
 const progressSpeed = document.getElementById("progressSpeed");
 const progressEta = document.getElementById("progressEta");
 const completedActions = document.getElementById("completedActions");
-const countdownSec = document.getElementById("countdownSec");
+const browserDownloadBtn = document.getElementById("browserDownloadBtn");
+const quickOpenFolderBtn = document.getElementById("quickOpenFolderBtn");
 
 // Library Elements
 const historyList = document.getElementById("historyList");
+const historyBadge = document.getElementById("historyBadge");
 const refreshHistoryBtn = document.getElementById("refreshHistoryBtn");
+const openFolderBtn = document.getElementById("openFolderBtn");
+const historyTabBtn = document.getElementById("historyTabBtn");
 const historySection = document.getElementById("historySection");
 
-// Install Elements
-const navInstallBtn = document.getElementById("navInstallBtn");
+// Mobile Elements
+const pwaInstallBtn = document.getElementById("pwaInstallBtn");
+const mobileInstallBanner = document.getElementById("mobileInstallBanner");
+const mobileInstallActionBtn = document.getElementById("mobileInstallActionBtn");
 const mobileNavHome = document.getElementById("mobileNavHome");
 const mobileNavPaste = document.getElementById("mobileNavPaste");
 const mobileNavLibrary = document.getElementById("mobileNavLibrary");
 const mobileNavInstall = document.getElementById("mobileNavInstall");
-const installGuideModal = document.getElementById("installGuideModal");
-const closeInstallModalBtn = document.getElementById("closeInstallModalBtn");
-const dismissInstallModalBtn = document.getElementById("dismissInstallModalBtn");
-const nativeInstallPromptBtn = document.getElementById("nativeInstallPromptBtn");
+
+// Modal Elements
+const videoModal = document.getElementById("videoModal");
+const modalVideoPlayer = document.getElementById("modalVideoPlayer");
+const modalVideoTitle = document.getElementById("modalVideoTitle");
+const closeModalBtn = document.getElementById("closeModalBtn");
 
 // PWA Service Worker Registration
 if ("serviceWorker" in navigator) {
@@ -62,41 +71,31 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-// PWA Install Prompt Listener
+// PWA Install Prompt Handler
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredInstallPrompt = e;
+  if (pwaInstallBtn) pwaInstallBtn.classList.remove("hidden");
+  if (mobileInstallBanner) mobileInstallBanner.classList.remove("hidden");
 });
 
-function handleInstallClick() {
+async function triggerInstallPrompt() {
   if (deferredInstallPrompt) {
     deferredInstallPrompt.prompt();
-    deferredInstallPrompt.userChoice.then(() => {
-      deferredInstallPrompt = null;
-    });
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === "accepted") {
+      if (pwaInstallBtn) pwaInstallBtn.classList.add("hidden");
+      if (mobileInstallBanner) mobileInstallBanner.classList.add("hidden");
+    }
+    deferredInstallPrompt = null;
+  } else {
+    showToast("Mobile browser ke menu (3 dots) par click karein aur 'Install App' ya 'Add to Home Screen' select karein.", "info");
   }
-  installGuideModal.classList.remove("hidden");
 }
 
-if (navInstallBtn) navInstallBtn.addEventListener("click", handleInstallClick);
-if (mobileNavInstall) mobileNavInstall.addEventListener("click", handleInstallClick);
-if (nativeInstallPromptBtn) nativeInstallPromptBtn.addEventListener("click", () => {
-  if (deferredInstallPrompt) {
-    deferredInstallPrompt.prompt();
-    deferredInstallPrompt.userChoice.then(() => {
-      deferredInstallPrompt = null;
-      installGuideModal.classList.add("hidden");
-    });
-  } else {
-    showToast("Mobile Chrome ke top-right 3 dots (⋮) par tap karein aur 'Install app' dabayein.", "info");
-  }
-});
-
-if (closeInstallModalBtn) closeInstallModalBtn.addEventListener("click", () => installGuideModal.classList.add("hidden"));
-if (dismissInstallModalBtn) dismissInstallModalBtn.addEventListener("click", () => installGuideModal.classList.add("hidden"));
-installGuideModal.addEventListener("click", (e) => {
-  if (e.target === installGuideModal) installGuideModal.classList.add("hidden");
-});
+if (pwaInstallBtn) pwaInstallBtn.addEventListener("click", triggerInstallPrompt);
+if (mobileInstallActionBtn) mobileInstallActionBtn.addEventListener("click", triggerInstallPrompt);
+if (mobileNavInstall) mobileNavInstall.addEventListener("click", triggerInstallPrompt);
 
 // Sound Chime Notification (Web Audio API)
 function playCompletionTone() {
@@ -107,8 +106,8 @@ function playCompletionTone() {
     osc.connect(gain);
     gain.connect(ctx.destination);
     osc.type = "sine";
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
-    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12);
+    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+    osc.frequency.setValueAtTime(880, ctx.currentTime + 0.12); // A5
     gain.gain.setValueAtTime(0.15, ctx.currentTime);
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.35);
     osc.start(ctx.currentTime);
@@ -116,17 +115,46 @@ function playCompletionTone() {
   } catch (e) {}
 }
 
+// Platform Detection Helper
+function detectPlatformFromUrl(url) {
+  const u = (url || "").toLowerCase();
+  if (u.includes("tiktok.com")) return { name: "TikTok", icon: "fa-brands fa-tiktok text-pink-400", nowm: true };
+  if (u.includes("youtube.com") || u.includes("youtu.be")) return { name: "YouTube", icon: "fa-brands fa-youtube text-red-500", nowm: false };
+  if (u.includes("instagram.com")) return { name: "Instagram", icon: "fa-brands fa-instagram text-pink-500", nowm: true };
+  if (u.includes("facebook.com") || u.includes("fb.watch") || u.includes("fb.com")) return { name: "Facebook", icon: "fa-brands fa-facebook text-blue-500", nowm: true };
+  if (u.includes("twitter.com") || u.includes("x.com")) return { name: "Twitter / X", icon: "fa-brands fa-x-twitter text-slate-200", nowm: true };
+  if (u.includes("pinterest.com") || u.includes("pin.it")) return { name: "Pinterest", icon: "fa-brands fa-pinterest text-red-400", nowm: true };
+  if (u.includes("reddit.com") || u.includes("v.redd.it")) return { name: "Reddit", icon: "fa-brands fa-reddit text-orange-500", nowm: true };
+  return { name: "Auto-Detect", icon: "fa-solid fa-link text-slate-400", nowm: false };
+}
+
+// Live URL Input Handler
+videoUrlInput.addEventListener("input", (e) => {
+  const detected = detectPlatformFromUrl(e.target.value);
+  detectedIcon.className = `${detected.icon} transition-all text-base`;
+  
+  document.querySelectorAll(".platform-chip").forEach(chip => {
+    const platform = chip.getAttribute("data-platform");
+    if (detected.name.toLowerCase().includes(platform)) {
+      chip.classList.add("active");
+    } else {
+      chip.classList.remove("active");
+    }
+  });
+});
+
 // Clipboard Paste
 async function handlePaste() {
   try {
     const text = await navigator.clipboard.readText();
     if (text) {
       videoUrlInput.value = text;
-      showToast("Link paste ho gaya! Details fetch ho rahi hain...", "info");
+      videoUrlInput.dispatchEvent(new Event("input"));
+      showToast("Link clipboard se paste kar diya gaya!", "info");
       fetchVideoInfo(text);
     }
   } catch (err) {
-    showToast("Clipboard permission nahi mili. Aap manually paste karein.", "warning");
+    showToast("Clipboard permission nahi mili. Aap manually Ctrl+V ya long-press kar ke paste karein.", "warning");
   }
 }
 
@@ -134,17 +162,17 @@ pasteBtn.addEventListener("click", handlePaste);
 
 // Toast Message
 function showToast(msg, type = "info") {
-  statusMessage.classList.remove("hidden", "bg-red-500/20", "text-red-300", "border-red-500/40", "bg-emerald-500/20", "text-emerald-300", "border-emerald-500/40", "bg-purple-500/20", "text-purple-200", "border-purple-500/40");
+  statusMessage.classList.remove("hidden", "bg-red-500/10", "border-red-500/30", "text-red-400", "bg-emerald-500/10", "border-emerald-500/30", "text-emerald-400", "bg-blue-500/10", "border-blue-500/30", "text-blue-400");
   
   if (type === "error") {
-    statusMessage.className = "mt-4 p-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-red-500/20 text-red-300 border border-red-500/40 max-w-lg mx-auto";
+    statusMessage.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-red-500/10 border border-red-500/30 text-red-400";
     statusMessage.innerHTML = `<i class="fa-solid fa-circle-exclamation text-base"></i> <span>${msg}</span>`;
   } else if (type === "success") {
-    statusMessage.className = "mt-4 p-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 max-w-lg mx-auto";
+    statusMessage.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400";
     statusMessage.innerHTML = `<i class="fa-solid fa-circle-check text-base"></i> <span>${msg}</span>`;
   } else {
-    statusMessage.className = "mt-4 p-3 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 bg-purple-500/20 text-purple-200 border border-purple-500/40 max-w-lg mx-auto";
-    statusMessage.innerHTML = `<i class="fa-solid fa-spinner animate-spin text-base"></i> <span>${msg}</span>`;
+    statusMessage.className = "mt-3 p-3 rounded-xl text-xs font-medium flex items-center gap-2 bg-blue-500/10 border border-blue-500/30 text-blue-400";
+    statusMessage.innerHTML = `<i class="fa-solid fa-info-circle text-base"></i> <span>${msg}</span>`;
   }
 }
 
@@ -160,8 +188,8 @@ async function fetchVideoInfo(url) {
   if (!url) return;
 
   fetchBtn.disabled = true;
-  fetchBtn.innerHTML = `<span>Fetching...</span>`;
-  showToast("Stream extract ho rahi hai...", "info");
+  fetchBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Fetching...</span>`;
+  showToast("Stream info extract ki ja rahi hai...", "info");
   previewCard.classList.add("hidden");
 
   try {
@@ -184,34 +212,17 @@ async function fetchVideoInfo(url) {
     showToast("Network error: " + err.message, "error");
   } finally {
     fetchBtn.disabled = false;
-    fetchBtn.innerHTML = `<span>Download</span>`;
+    fetchBtn.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i> <span>Fetch Video</span>`;
   }
 }
 
-// Render Preview Card with Thumbnail Proxy & Fallback
+// Render Preview Card
 function renderPreview(data) {
-  thumbnailFallback.classList.add("hidden");
-  videoThumbnail.classList.remove("hidden");
-
-  if (data.thumbnail) {
-    const proxyUrl = `/api/thumbnail?url=${encodeURIComponent(data.thumbnail)}`;
-    videoThumbnail.src = proxyUrl;
-    
-    videoThumbnail.onerror = () => {
-      if (videoThumbnail.src !== data.thumbnail) {
-        videoThumbnail.src = data.thumbnail;
-      } else {
-        videoThumbnail.classList.add("hidden");
-        thumbnailFallback.classList.remove("hidden");
-      }
-    };
-  } else {
-    videoThumbnail.classList.add("hidden");
-    thumbnailFallback.classList.remove("hidden");
-  }
-
-  platformBadge.innerHTML = `<i class="fa-brands fa-${data.platform}"></i> ${data.platform.toUpperCase()}`;
-  if (data.has_no_watermark || data.platform === "tiktok") {
+  const detected = detectPlatformFromUrl(data.url);
+  videoThumbnail.src = data.thumbnail || "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=600&q=80";
+  
+  platformBadge.innerHTML = `<i class="${detected.icon}"></i> ${detected.name}`;
+  if (data.has_no_watermark || data.platform === "tiktok" || detected.nowm) {
     noWatermarkBadge.classList.remove("hidden");
   } else {
     noWatermarkBadge.classList.add("hidden");
@@ -234,7 +245,7 @@ function renderQualityButtons(options) {
   qualityOptionsList.innerHTML = "";
   const videoOptions = options.filter(o => o.type === "video");
   if (videoOptions.length === 0) {
-    videoOptions.push({ label: "Best Available", value: "best" });
+    videoOptions.push({ label: "Best Available Quality", value: "best" });
   }
 
   videoOptions.forEach((opt, idx) => {
@@ -284,9 +295,11 @@ urlForm.addEventListener("submit", (e) => {
   if (url) fetchVideoInfo(url);
 });
 
-// Auto-Save Trigger to Device Downloads
+// Trigger Device Download (Auto-Save Mechanism)
 function triggerAutoSaveToDevice(filename) {
   const fileUrl = `/api/file/${encodeURIComponent(filename)}?attachment=true`;
+  
+  // Method 1: Invisible direct anchor trigger
   const a = document.createElement("a");
   a.href = fileUrl;
   a.download = filename;
@@ -295,6 +308,7 @@ function triggerAutoSaveToDevice(filename) {
   a.click();
   setTimeout(() => document.body.removeChild(a), 1000);
 
+  // Method 2: Hidden iframe fallback (guarantees trigger on Android Chrome & Safari)
   const iframe = document.createElement("iframe");
   iframe.style.display = "none";
   iframe.src = fileUrl;
@@ -337,7 +351,7 @@ startDownloadBtn.addEventListener("click", async () => {
   }
 });
 
-// Track Progress & Auto-Refresh Page
+// Track Progress
 function trackDownloadProgress(taskId) {
   progressCard.classList.remove("hidden");
   completedActions.classList.add("hidden");
@@ -346,7 +360,7 @@ function trackDownloadProgress(taskId) {
   progressBar.style.width = "5%";
   progressPercentText.textContent = "5%";
   progressStatusText.textContent = "Downloading stream...";
-  progressSubText.textContent = "Server extraction active";
+  progressSubText.textContent = "High speed stream extraction active";
 
   if (pollInterval) clearInterval(pollInterval);
 
@@ -367,7 +381,7 @@ function trackDownloadProgress(taskId) {
       progressEta.textContent = `ETA: ${t.eta || '...'}`;
 
       if (t.status === "downloading") {
-        progressStatusText.textContent = "Downloading media stream...";
+        progressStatusText.textContent = "Downloading media streams...";
         progressSubText.textContent = `Speed: ${t.speed || 'Fast'}`;
       } else if (t.status === "processing") {
         progressStatusText.textContent = "Merging Video & Audio (FFmpeg)...";
@@ -379,26 +393,24 @@ function trackDownloadProgress(taskId) {
         progressBar.style.width = "100%";
         progressPercentText.textContent = "100%";
         progressStatusText.textContent = "Download Complete!";
-        progressSubText.textContent = `Saved: ${t.filename || 'video'}`;
+        progressSubText.textContent = `File: ${t.filename || 'media'}`;
 
-        // Trigger Auto-Save to Device
-        triggerAutoSaveToDevice(t.filename);
-        playCompletionTone();
+        const fileUrl = `/api/file/${encodeURIComponent(t.filename)}?attachment=true`;
+        browserDownloadBtn.href = fileUrl;
         completedActions.classList.remove("hidden");
 
-        // AUTO-REFRESH COUNTDOWN: Refresh page after 3 seconds for next video
-        let secondsLeft = 3;
-        countdownSec.textContent = secondsLeft;
+        // AUTO-SAVE TO DEVICE IF TOGGLED ON
+        if (autoSaveToggle.checked) {
+          triggerAutoSaveToDevice(t.filename);
+          playCompletionTone();
+          showToast(`"${t.filename}" aapke device (Downloads folder) mein khud-ba-khud save ho gayi hai!`, "success");
+        } else {
+          playCompletionTone();
+        }
 
-        const countdownInterval = setInterval(() => {
-          secondsLeft--;
-          if (countdownSec) countdownSec.textContent = secondsLeft;
-          if (secondsLeft <= 0) {
-            clearInterval(countdownInterval);
-            window.location.reload();
-          }
-        }, 1000);
-
+        startDownloadBtn.disabled = false;
+        updateFormatUI();
+        loadHistory();
       } else if (t.status === "error") {
         clearInterval(pollInterval);
         progressStatusText.textContent = "Download Failed";
@@ -414,7 +426,31 @@ function trackDownloadProgress(taskId) {
   }, 750);
 }
 
-// Mobile Bottom Nav
+// Open folder action (PC)
+async function openFolder() {
+  try {
+    const res = await fetch("/api/open-folder", { method: "POST" });
+    const data = await res.json();
+    if (data.success) {
+      showToast("PC par Downloads folder open kar diya gaya!", "success");
+    } else {
+      showToast(data.error || "Folder open nahi ho saka", "error");
+    }
+  } catch (err) {
+    showToast("Error opening folder: " + err.message, "error");
+  }
+}
+
+if (openFolderBtn) openFolderBtn.addEventListener("click", openFolder);
+if (quickOpenFolderBtn) quickOpenFolderBtn.addEventListener("click", openFolder);
+
+if (historyTabBtn) {
+  historyTabBtn.addEventListener("click", () => {
+    historySection.scrollIntoView({ behavior: "smooth" });
+  });
+}
+
+// Mobile Bottom Nav Event Handlers
 if (mobileNavHome) {
   mobileNavHome.addEventListener("click", () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -442,6 +478,8 @@ async function loadHistory() {
     if (!data.success) return;
 
     const files = data.files || [];
+    if (historyBadge) historyBadge.textContent = files.length;
+
     if (files.length === 0) {
       historyList.innerHTML = `
         <div class="text-center py-6 text-slate-500 text-xs">
@@ -458,14 +496,14 @@ async function loadHistory() {
       const icon = isAudio ? "fa-music text-purple-400" : "fa-film text-brand-400";
 
       const item = document.createElement("div");
-      item.className = "flex items-center justify-between p-2.5 sm:p-3 rounded-xl bg-dark-850 border border-slate-800 hover:border-slate-700 transition";
+      item.className = "flex items-center justify-between p-3 rounded-xl bg-dark-850 border border-slate-700/60 hover:border-slate-600 transition";
       item.innerHTML = `
         <div class="flex items-center gap-2.5 min-w-0 pr-2">
-          <div class="w-8 h-8 rounded-lg bg-dark-800 border border-slate-700 flex items-center justify-center shrink-0">
+          <div class="w-8 h-8 rounded-lg bg-dark-700 border border-slate-700 flex items-center justify-center shrink-0">
             <i class="fa-solid ${icon} text-xs"></i>
           </div>
           <div class="min-w-0">
-            <h5 class="text-xs font-semibold text-white truncate max-w-[160px] sm:max-w-md" title="${f.filename}">
+            <h5 class="text-xs font-semibold text-white truncate max-w-[180px] sm:max-w-md" title="${f.filename}">
               ${f.filename}
             </h5>
             <div class="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono mt-0.5">
@@ -477,15 +515,70 @@ async function loadHistory() {
         </div>
 
         <div class="flex items-center gap-1.5 shrink-0">
+          ${!isAudio ? `
+            <button class="play-btn w-7 h-7 rounded-lg bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-400 flex items-center justify-center transition" title="Preview">
+              <i class="fa-solid fa-play text-[10px]"></i>
+            </button>
+          ` : ''}
           <a href="/api/file/${encodeURIComponent(f.filename)}?attachment=true" download class="w-7 h-7 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 flex items-center justify-center transition" title="Download">
             <i class="fa-solid fa-download text-[10px]"></i>
           </a>
+          <button class="delete-btn w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 flex items-center justify-center transition" title="Delete">
+            <i class="fa-regular fa-trash-can text-[10px]"></i>
+          </button>
         </div>
       `;
+
+      const playBtn = item.querySelector(".play-btn");
+      if (playBtn) {
+        playBtn.addEventListener("click", () => {
+          modalVideoTitle.textContent = f.filename;
+          modalVideoPlayer.src = `/api/file/${encodeURIComponent(f.filename)}?attachment=false`;
+          videoModal.classList.remove("hidden");
+          modalVideoPlayer.play();
+        });
+      }
+
+      const delBtn = item.querySelector(".delete-btn");
+      delBtn.addEventListener("click", async () => {
+        if (confirm(`Kya aap "${f.filename}" ko delete karna chahte hain?`)) {
+          const dres = await fetch("/api/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ filename: f.filename })
+          });
+          const ddata = await dres.json();
+          if (ddata.success) {
+            loadHistory();
+            showToast("File delete ho gayi", "info");
+          }
+        }
+      });
+
       historyList.appendChild(item);
     });
-  } catch (err) {}
+  } catch (err) {
+    console.error("History fetch error:", err);
+  }
 }
 
-if (refreshHistoryBtn) refreshHistoryBtn.addEventListener("click", loadHistory);
+refreshHistoryBtn.addEventListener("click", loadHistory);
+
+// Modal Close
+closeModalBtn.addEventListener("click", () => {
+  modalVideoPlayer.pause();
+  modalVideoPlayer.src = "";
+  videoModal.classList.add("hidden");
+});
+
+videoModal.addEventListener("click", (e) => {
+  if (e.target === videoModal) {
+    modalVideoPlayer.pause();
+    modalVideoPlayer.src = "";
+    videoModal.classList.add("hidden");
+  }
+});
+
+// Initial load
 loadHistory();
+
