@@ -33,3 +33,4 @@ flutter_app/.dart_tool/
 android/.gradle/
 android/app/build/
 android/local.properties
+android_apk_build/

@@ -20,13 +20,25 @@ Kisi bhi compiling ya APK file ke jhanjhat ke baghair direct install karein:
 
 ---
 
+## 🚀 Standalone Ready APK (Already Built)
+
+A production-ready standalone APK has already been compiled for **`https://allinonedownloder.vercel.app`**:
+- **APK Location**: [`OmniDownloader.apk`](file:///c:/Users/KAMRAN__TARIQ/Downloads/Compressed/All-in-one-Downloder-main/All-in-one-Downloder-main/OmniDownloader.apk) (Root directory)
+- **AAB / Signing Bundle**: Located in [`android_apk_build/`](file:///c:/Users/KAMRAN__TARIQ/Downloads/Compressed/All-in-one-Downloder-main/All-in-one-Downloder-main/android_apk_build)
+- Simply transfer `OmniDownloader.apk` to your Android device via USB, WhatsApp, or Google Drive, tap to install, and run!
+
+---
+
 ## 🛠️ Method 2: Android Studio se Standalone APK Build Karna
 
-Agar aapko direct `.apk` file generate karni hai:
+Agar aapko Android Studio mein khud custom changes kar ke build karna hai:
 
 1. **Android Studio** open karein.
 2. **Open Project** par click karein aur yeh folder select karein:
-   `D:\All Downloder\android`
-3. [MainActivity.java](file:///d:/All%20Downloder/android/app/src/main/java/com/omnidownloader/app/MainActivity.java) mein `APP_URL` ko apne computer ke local IP par set karein (jaise: `http://192.168.0.101:5000`).
-4. Menu mein jayein: **Build > Build Bundle(s) / APK(s) > Build APK(s)**
-5. Android Studio kuch hi lamhon mein aapki **`OmniDownloader.apk`** file bana dega!
+   `android/`
+3. [`MainActivity.java`](file:///c:/Users/KAMRAN__TARIQ/Downloads/Compressed/All-in-one-Downloder-main/All-in-one-Downloder-main/android/app/src/main/java/com/omnidownloader/app/MainActivity.java) already configured hai:
+   ```java
+   private static final String APP_URL = "https://allinonedownloder.vercel.app";
+   ```
+4. Menu mein jayein: **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
+5. Android Studio kuch hi lamhon mein aapki nayi `.apk` file bana dega!

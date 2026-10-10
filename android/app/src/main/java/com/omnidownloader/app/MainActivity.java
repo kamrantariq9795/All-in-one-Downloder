@@ -17,8 +17,8 @@ import android.widget.Toast;
 public class MainActivity extends Activity {
 
     private WebView webView;
-    // Set your server address or local IP here
-    private static final String APP_URL = "http://10.0.2.2:5000"; // Or your PC local IP e.g., http://192.168.0.101:5000
+    // Set your server address or production domain here
+    private static final String APP_URL = "https://allinonedownloder.vercel.app";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {

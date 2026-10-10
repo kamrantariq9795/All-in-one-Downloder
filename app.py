@@ -25,6 +25,38 @@ def index():
     return render_template("index.html")
 
 
+@app.route("/sw.js")
+def service_worker():
+    response = send_file(os.path.join(app.static_folder, "sw.js"), mimetype="application/javascript")
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
+
+@app.route("/manifest.json")
+def manifest():
+    return send_file(os.path.join(app.static_folder, "manifest.json"), mimetype="application/manifest+json")
+
+
+@app.route("/OmniDownloader.apk")
+def download_apk():
+    apk_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "OmniDownloader.apk")
+    if os.path.exists(apk_path):
+        return send_file(apk_path, as_attachment=True, download_name="OmniDownloader.apk", mimetype="application/vnd.android.package-archive")
+    return jsonify({"error": "APK file not found"}), 404
+
+
+@app.route("/.well-known/assetlinks.json")
+def assetlinks():
+    return jsonify([{
+        "relation": ["delegate_permission/common.handle_all_urls"],
+        "target": {
+            "namespace": "android_app",
+            "package_name": "com.omnidownloader.app",
+            "sha256_cert_fingerprints": ["96:72:20:22:89:D5:C2:B2:98:31:29:5D:CC:EA:8B:D0:E1:C3:82:6E:DC:3E:79:38:9A:2A:0E:86:80:C9:D3:33"]
+        }
+    }])
+
+
 @app.route("/api/info", methods=["POST"])
 def get_info():
     data = request.get_json() or {}

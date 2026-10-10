@@ -67,7 +67,9 @@ const closeModalBtn = document.getElementById("closeModalBtn");
 // PWA Service Worker Registration
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/static/sw.js").catch(() => {});
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      return navigator.serviceWorker.register("/static/sw.js").catch(() => {});
+    });
   });
 }
 
@@ -79,6 +81,23 @@ window.addEventListener("beforeinstallprompt", (e) => {
   if (mobileInstallBanner) mobileInstallBanner.classList.remove("hidden");
 });
 
+const installGuideModal = document.getElementById("installGuideModal");
+const closeInstallModalBtn = document.getElementById("closeInstallModalBtn");
+const dismissInstallModalBtn = document.getElementById("dismissInstallModalBtn");
+const nativeInstallPromptBtn = document.getElementById("nativeInstallPromptBtn");
+
+function openInstallModal() {
+  if (installGuideModal) {
+    installGuideModal.classList.remove("hidden");
+  }
+}
+
+function closeInstallModal() {
+  if (installGuideModal) {
+    installGuideModal.classList.add("hidden");
+  }
+}
+
 async function triggerInstallPrompt() {
   if (deferredInstallPrompt) {
     deferredInstallPrompt.prompt();
@@ -86,16 +105,30 @@ async function triggerInstallPrompt() {
     if (outcome === "accepted") {
       if (pwaInstallBtn) pwaInstallBtn.classList.add("hidden");
       if (mobileInstallBanner) mobileInstallBanner.classList.add("hidden");
+      closeInstallModal();
     }
     deferredInstallPrompt = null;
   } else {
-    showToast("Mobile browser ke menu (3 dots) par click karein aur 'Install App' ya 'Add to Home Screen' select karein.", "info");
+    openInstallModal();
   }
 }
 
-if (pwaInstallBtn) pwaInstallBtn.addEventListener("click", triggerInstallPrompt);
-if (mobileInstallActionBtn) mobileInstallActionBtn.addEventListener("click", triggerInstallPrompt);
-if (mobileNavInstall) mobileNavInstall.addEventListener("click", triggerInstallPrompt);
+const navInstallBtn = document.getElementById("navInstallBtn");
+if (navInstallBtn) navInstallBtn.addEventListener("click", openInstallModal);
+if (pwaInstallBtn) pwaInstallBtn.addEventListener("click", openInstallModal);
+if (mobileInstallActionBtn) mobileInstallActionBtn.addEventListener("click", openInstallModal);
+if (mobileNavInstall) mobileNavInstall.addEventListener("click", openInstallModal);
+if (nativeInstallPromptBtn) {
+  nativeInstallPromptBtn.addEventListener("click", async () => {
+    if (deferredInstallPrompt) {
+      await triggerInstallPrompt();
+    } else {
+      showToast("Browser menu (⋮) kholein aur 'Install app' ya 'Add to Home screen' select karein, ya niche APK download karein!", "info");
+    }
+  });
+}
+if (closeInstallModalBtn) closeInstallModalBtn.addEventListener("click", closeInstallModal);
+if (dismissInstallModalBtn) dismissInstallModalBtn.addEventListener("click", closeInstallModal);
 
 // Sound Chime Notification (Web Audio API)
 function playCompletionTone() {
@@ -296,13 +329,13 @@ urlForm.addEventListener("submit", (e) => {
 });
 
 // Trigger Device Download (Auto-Save Mechanism)
-function triggerAutoSaveToDevice(filename) {
-  const fileUrl = `/api/file/${encodeURIComponent(filename)}?attachment=true`;
+function triggerAutoSaveToDevice(filename, directUrl = null) {
+  const fileUrl = directUrl || `/api/file/${encodeURIComponent(filename)}?attachment=true`;
   
   // Method 1: Invisible direct anchor trigger
   const a = document.createElement("a");
   a.href = fileUrl;
-  a.download = filename;
+  a.download = filename || "video.mp4";
   a.style.display = "none";
   document.body.appendChild(a);
   a.click();
@@ -313,7 +346,7 @@ function triggerAutoSaveToDevice(filename) {
   iframe.style.display = "none";
   iframe.src = fileUrl;
   document.body.appendChild(iframe);
-  setTimeout(() => document.body.removeChild(iframe), 3000);
+  setTimeout(() => document.body.removeChild(iframe), 5000);
 }
 
 // Start Download
@@ -395,13 +428,13 @@ function trackDownloadProgress(taskId) {
         progressStatusText.textContent = "Download Complete!";
         progressSubText.textContent = `File: ${t.filename || 'media'}`;
 
-        const fileUrl = `/api/file/${encodeURIComponent(t.filename)}?attachment=true`;
+        const fileUrl = t.direct_url || `/api/file/${encodeURIComponent(t.filename)}?attachment=true`;
         browserDownloadBtn.href = fileUrl;
         completedActions.classList.remove("hidden");
 
         // AUTO-SAVE TO DEVICE IF TOGGLED ON
         if (autoSaveToggle.checked) {
-          triggerAutoSaveToDevice(t.filename);
+          triggerAutoSaveToDevice(t.filename, t.direct_url);
           playCompletionTone();
           showToast(`"${t.filename}" aapke device (Downloads folder) mein khud-ba-khud save ho gayi hai!`, "success");
         } else {
